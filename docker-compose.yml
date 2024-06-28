@@ -1,0 +1,82 @@
+version: '3.8'
+
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    networks:
+      - mynetwork
+    healthcheck:
+      test: ["CMD-SHELL", "rabbitmqctl status"]
+      interval: 10s
+      timeout: 10s
+      retries: 3
+
+  sftp:
+    image: atmoz/sftp
+    container_name: sftp
+    ports:
+      - "2222:22"
+    volumes:
+      - ./sftp_data:/home/ftpuser/ftp
+    environment:
+      SFTP_USERS: ftpuser:abcd1234:::ftp
+    networks:
+      - mynetwork
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep sshd"]
+      interval: 10s
+      timeout: 10s
+      retries: 3
+
+  python_service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      sftp:
+        condition: service_healthy
+    networks:
+      - mynetwork
+
+  consumer_service:
+    build:
+      context: ./consumer
+      dockerfile: Dockerfile
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+    networks:
+      - mynetwork
+
+  mysql:
+    image: mysql:8
+    container_name: mysql
+    environment:
+      MYSQL_DATABASE: suivi_conso
+      MYSQL_USER: jeanyves
+      MYSQL_PASSWORD: 01@3338689
+      MYSQL_ROOT_PASSWORD: 132@9026
+    ports:
+      - "3307:3306"
+    networks:
+      - mynetwork
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u jeanyves -p'01@3338689'"]
+      interval: 10s
+      timeout: 10s
+      retries: 3
+
+networks:
+  mynetwork:
+    driver: bridge
