@@ -19,7 +19,6 @@ DB_USER = 'jeanyves'
 DB_PASS = '01@3338689'
 DB_PORT = '3306'
 
-
 def wait_for_service(service_func, retries=50, delay=10):
     for i in range(retries):
         try:
@@ -49,8 +48,11 @@ def connect_db():
                       (id INT AUTO_INCREMENT PRIMARY KEY,
                        content JSON NOT NULL)''')
     conn.commit()
+    if cursor:
+        logging.info("Table 'messages' created ")
+    else:
+        logging.info("Table 'messages' already exists")
     return conn
-
 
 def save_message_to_db(db_conn, message):
     try:
@@ -65,13 +67,15 @@ def save_message_to_db(db_conn, message):
             logging.error("Unable to determine the current database")
 
         # Insérer le message
-        query = 'INSERT INTO suivi_conso.messages (content) VALUES (%s)'
+        query = 'INSERT INTO messages (content) VALUES (%s)'
         cursor.execute(query, (message,))
         db_conn.commit()
-        logging.info("Message saved to database")
-
+        if query:
+            logging.info("Message saved to database")
+        else:
+            logging.info("Message don't saved to database")
         # Validation: récupérer les données après insertion pour vérifier
-        cursor.execute('SELECT * FROM suivi_conso.messages ORDER BY id DESC LIMIT 1;')
+        cursor.execute('SELECT * FROM messages ORDER BY id DESC LIMIT 1;')
         result = cursor.fetchone()
         if result:
             logging.info(f"Message retrieved from database: {result}")
@@ -80,26 +84,6 @@ def save_message_to_db(db_conn, message):
     except mysql.connector.Error as err:
         logging.error(f"Error: {err}")
         db_conn.rollback()
-
-
-# def save_message_to_db(db_conn, message):
-#     try:
-#         cursor = db_conn.cursor()
-#         query = 'INSERT INTO suivi_conso.messages (content) VALUES (%s)'
-#         cursor.execute(query, (message,))
-#         db_conn.commit()
-#         logging.info("Message saved to database")
-
-#         # Validation: récupérer les données après insertion pour vérifier
-#         cursor.execute('SELECT * FROM suivi_conso.messages;', )
-#         result = cursor.fetchone()
-#         if result:
-#             logging.info(f"Message retrieved from database: {result}")
-#         else:
-#             logging.error("Message not found in database after insertion")
-#     except mysql.connector.Error as err:
-#         logging.error(f"Error: {err}")
-#         db_conn.rollback()
 
 def consume_messages(rabbitmq_channel, db_conn):
     def callback(ch, method, properties, body):

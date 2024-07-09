@@ -68,7 +68,7 @@ services:
       MYSQL_PASSWORD: 01@3338689
       MYSQL_ROOT_PASSWORD: 132@9026
     ports:
-      - "3307:3306"
+      - "5000:3306"
     networks:
       - mynetwork
     healthcheck:

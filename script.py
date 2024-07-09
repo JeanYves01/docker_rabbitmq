@@ -42,6 +42,7 @@ def connect_rabbitmq():
 
 def send_test_message(rabbitmq_channel):
     message = {"key": "test"}
+    message = {"nom": "Jean Yves"}
     rabbitmq_channel.basic_publish(exchange='',
                                    routing_key=RABBITMQ_QUEUE,
                                    body=json.dumps(message))
